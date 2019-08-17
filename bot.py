@@ -16,31 +16,56 @@ class Bruh(discord.Client):
     def setTraining():
         pass
 
-    async def on_message(self, message):
-        """
-        Handle messages
-        """
+    def isValidBruh(message):
+        # Plain bruh
+        if message == "bruh":
+            return True
 
+        # Dynamic bruhs (only 'bruh' and ' ' are allowed)
+        if message != message.strip(" "): # No trailing or leading spaces
+            return False
+        if "bruhbruh" in message: # No double bruh
+            return False
+        if "  " in message: # No double spaces
+            return False
+        
+        message = message.replace("bruh", "") # Bruh is allowed
+        message = message.replace(" ", "") # Single space allowed
+        if message == "":
+            return True
+
+        return False # DESTROY
+
+    def destroyNonBruhs(message):
+        if isValidBruh(message.content):
+            return
+            
+        # Invalid message. Remove and replace
+        await self.send_message(message.channel, "bruh")
+        await self.delete_message(message)
+
+    # Sent messages
+    async def on_message(self, message):
+        
         if message.author == self.user:
             return
-        elif message.channel.name != "bruh":
+
+        if message.channel.name != "bruh":
             return
+        
+        destroyNonBruhs(message)
 
-        if message.content != "bruh":
-            # Invalid message. Remove and replace
-            await self.send_message(message.channel, "bruh")
-            await self.delete_message(message)
-
+    # Edits
     async def on_message_edit(self, before, after):
-        if after != "bruh":
-            await self.send_message(after.channel, "bruh")
-            await self.delete_message(after)
+        destroyNonBruhs(message)
 
+    # Reactions
     # async def on_reaction_add(self, reaction, user):
     #     if not len(reaction.message.reactions) < 4:
     #         # message is complete, timme to verify
     #         for i in range(4):
 
+    # Voice
     async def on_voice_state_update(self, before, after):
         # prevent recursion
         if after == self.user:
