@@ -3,6 +3,7 @@ bruh
 """
 
 import discord
+import re # Regex for dynamic bruh emoji acceptance
 
 def readToken():
     with open("TOKEN", 'r') as f:
@@ -21,14 +22,15 @@ class Bruh(discord.Client):
         if message == "bruh":
             return True
 
-        # Dynamic bruhs (only 'bruh' and ' ' are allowed)
-        if message != message.strip(" "): # No trailing or leading spaces
+        # Dynamic bruhs (only 'bruh', ':bruh:', and ' ' are allowed)
+        if message != message.lstrip(" "): # No leading whitespace
             return False
         if "bruhbruh" in message: # No double bruh
             return False
-        if "  " in message: # No double spaces
+        if "     " in message: # No more than 4 spaces in a row
             return False
-        
+
+        message = re.sub("<:bruh:\d+>", "", message) # Bruh emoji is allowed
         message = message.replace("bruh", "") # Bruh is allowed
         message = message.replace(" ", "") # Single space allowed
         if message == "":
@@ -36,34 +38,86 @@ class Bruh(discord.Client):
 
         return False # DESTROY
 
-    def destroyNonBruhs(message):
-        if isValidBruh(message.content):
-            return
+    def isValidReaction(self, reaction):
+        
+        reactions = reaction.message.reactions
+
+        # A default unicode emoji
+        if not reaction.custom_emoji:
+            # Allow a custom bruh emoji to be before the unicode bruhs
+            reactionOffset = 1
+            if reactions[0].custom_emoji:
+                reactionOffset = 2
+
+            # bruh only
+            regional_indicator_bruh = [
+                '\U0001f1e7', #B
+                '\U0001f1f7', #R
+                '\U0001f1fa', #U
+                '\U0001f1ed'] #H
             
-        # Invalid message. Remove and replace
-        await self.send_message(message.channel, "bruh")
-        await self.delete_message(message)
+            emoji = self.convertToUnicode(reaction.emoji)
+            properEmoji = self.convertToUnicode(regional_indicator_bruh[(len(reactions) % 4) - reactionOffset])
+
+            if emoji == properEmoji: # Valid reaction
+                return True
+            
+            return False # Invalid
+
+        # A custom bruh emoji
+        if len(reactions) == 1 or len(reactions) == 5: # Allow a unicode bruh sequence
+            validEmojiNames = [                        # to be followed by a custom bruh
+                'bruh']
+            valid = False
+            for validEmojiName in validEmojiNames:
+                
+                if reaction.emoji.name == validEmojiName:
+                    return True
+
+        return False
+        
+
+    async def validateMessage(self, message):
+        print("\"" + message.content + "\"")
+        print("message sent by: " + message.author.name + " (" + message.author.nick + ")")
+        if self.isValidMessage(message.content):
+            print("valid")
+            return
+        
+        # Invalid message. Delete
+        print("invalid")
+        channel = message.channel
+        await message.delete()
+
+    async def validateReaction(self, reaction, user):
+        print("\"" + self.convertToUnicode(reaction.emoji) + "\"")
+        print("reaction sent by: " + user.name + " (" + user.display_name + ")")
+        if self.isValidReaction(reaction):
+            print("valid")
+            return
+
+        # Invalid reaction. Delete
+        print("invalid")
+        await reaction.remove(user)
 
     # Sent messages
     async def on_message(self, message):
-        
+
         if message.author == self.user:
             return
 
         if message.channel.name != "bruh":
             return
-        
-        destroyNonBruhs(message)
+
+        await self.validateMessage(message)
 
     # Edits
     async def on_message_edit(self, before, after):
-        destroyNonBruhs(message)
+        await self.validateMessage(after)
 
     # Reactions
-    # async def on_reaction_add(self, reaction, user):
-    #     if not len(reaction.message.reactions) < 4:
-    #         # message is complete, timme to verify
-    #         for i in range(4):
+    async def on_reaction_add(self, reaction, user):
+        await self.validateReaction(reaction, user)
 
     # Voice
     async def on_voice_state_update(self, before, after):
