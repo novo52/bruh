@@ -17,7 +17,13 @@ class Bruh(discord.Client):
     def setTraining():
         pass
 
-    def isValidBruh(message):
+    
+    # Python can't deal with emojis, convert to unicode codes
+    def convertToUnicode(self, emoji):
+        return emoji.encode('unicode-escape').decode('utf-8')
+
+    def isValidMessage(self, message):
+        
         # Plain bruh
         if message == "bruh":
             return True
